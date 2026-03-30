@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@openrouter/sdk": "^0.10.2",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",

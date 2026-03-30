@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import { db } from '../db'
-import { transactions, categories } from '../db/schema'
-import { eq, and, desc } from 'drizzle-orm'
+import { transactions } from '../db/schema'
+import { eq, desc } from 'drizzle-orm'
 
 export const getTransactions = async (req: any, res: Response) => {
   try {
@@ -43,6 +43,10 @@ export const createTransaction = async (req: any, res: Response) => {
         category: true,
       },
     })
+
+    // Trigger budget alerts asynchronously
+    const { checkBudgetAlerts } = require('../services/notification.service')
+    checkBudgetAlerts(req.userId)
 
     res.status(201).json(txWithCategory)
   } catch (error) {

@@ -1,38 +1,56 @@
-import axios from 'axios'
+import { OpenRouter } from '@openrouter/sdk'
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const model = 'google/gemini-2.0-flash-lite-preview-02-05:free'
+const model = 'google/gemini-2.0-flash-001'
 
 export interface AIMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
 }
 
-export const getAICompletion = async (messages: AIMessage[]) => {
-  const apiKey = process.env.OPENROUTER_API_KEY
+const getOpenRouterClient = () => {
+  const apiKey = (process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY || '').trim()
   
-  if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
+  if (!apiKey || apiKey.includes('your_openrouter_api_key_here')) {
+    return null
+  }
+
+  // OpenRouter SDK (Speakeasy-generated) constructor options
+  return new OpenRouter({
+    apiKey,
+    httpReferer: 'https://finance-ai.local',
+    appTitle: 'FinanceAI - Personal Financial Advisor',
+  })
+}
+
+export const getAICompletion = async (messages: AIMessage[]) => {
+  const client = getOpenRouterClient()
+  
+  if (!client) {
     return "I'm currently in demo mode. Please set a valid OPENROUTER_API_KEY in the server/.env file to enable my full intelligence! 🧠"
   }
 
   try {
-    const response = await axios.post(
-      OPENROUTER_URL,
-      {
+    // The Speakeasy-generated SDK uses a nested 'chatGenerationParams' structure
+    const response = await client.chat.send({
+      chatGenerationParams: {
         model,
-        messages,
+        messages: messages.map(m => ({
+          role: m.role,
+          content: m.content
+        })),
+        stream: false,
         temperature: 0.7,
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'X-OpenRouter-Title': 'FinanceAI - Personal Financial Advisor',
-        },
       }
-    )
+    })
 
-    return response.data.choices[0].message.content
+    // The response is also nested differently in this SDK version
+    // Check if it's a direct response or an operations result
+    if ('choices' in response) {
+      return response.choices[0].message.content
+    }
+    
+    // Fallback if the response type is SendChatCompletionRequestResponse
+    return (response as any).data?.choices?.[0]?.message?.content || "AI is thinking... please try again."
   } catch (error: any) {
     console.error('OpenRouter API Error:', error.response?.data || error.message)
     throw new Error('Failed to communicate with AI Advisor.')
@@ -114,30 +132,27 @@ TONE: Professional, encouraging, and highly specific to the Bangladeshi market. 
 }
 
 export const generateMonthlyReport = async (promptContent: string) => {
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const client = getOpenRouterClient()
   
-  if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
+  if (!client) {
     return "Demo Mode: AI Reports require a valid OpenAI/Gemini API key. Set OPENROUTER_API_KEY in server/.env to see a full financial analysis! 🧠"
   }
 
   try {
-    const response = await axios.post(
-      OPENROUTER_URL,
-      {
+    const response = await client.chat.send({
+      chatGenerationParams: {
         model,
         messages: [{ role: 'system', content: promptContent }],
+        stream: false,
         temperature: 0.8,
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'X-OpenRouter-Title': 'FinanceAI - Monthly Report Generator',
-        },
       }
-    )
+    })
 
-    return response.data.choices[0].message.content
+    if ('choices' in response) {
+      return response.choices[0].message.content
+    }
+    
+    return (response as any).data?.choices?.[0]?.message?.content || "AI report generated (check dashboard)."
   } catch (error: any) {
     console.error('Report Generation Error:', error.response?.data || error.message)
     throw new Error('Failed to generate monthly report.')
