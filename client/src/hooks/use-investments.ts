@@ -49,7 +49,19 @@ export function useInvestments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['investments'] })
+      addToast({
+        type: 'success',
+        title: 'Asset updated',
+        message: 'Market value synchronized successfully.',
+      })
     },
+    onError: () => {
+      addToast({
+        type: 'error',
+        title: 'Update failed',
+        message: 'Could not update investment value.',
+      })
+    }
   })
 
   const deleteInvestment = useMutation({
