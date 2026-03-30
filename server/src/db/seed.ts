@@ -20,6 +20,9 @@ const defaultCategories = [
   { name: 'Stocks', type: 'investment' as const, icon: 'LineChart', color: 'text-primary' },
   { name: 'Crypto', type: 'investment' as const, icon: 'Coins', color: 'text-orange-500' },
   { name: 'Fixed Deposit', type: 'investment' as const, icon: 'Lock', color: 'text-accent' },
+  
+  // Other
+  { name: 'Other', type: 'want' as const, icon: 'MoreHorizontal', color: 'text-foreground-muted' },
 ]
 
 async function seed() {
@@ -29,7 +32,15 @@ async function seed() {
       await db.insert(categories).values({
         ...cat,
         isDefault: true,
-      }).onConflictDoNothing()
+      }).onConflictDoUpdate({
+        target: categories.name,
+        set: {
+          type: cat.type,
+          icon: cat.icon,
+          color: cat.color,
+          isDefault: true,
+        }
+      })
     }
     console.log('Successfully seeded categories!')
   } catch (error) {
