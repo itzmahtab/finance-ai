@@ -33,13 +33,15 @@ export function useAI() {
   useEffect(() => {
     if (history && history.length > 0) {
       // Flatten messages from the DB structure
-      const flattened = history.flatMap((h: any) => 
-        h.messages.map((m: any, i: number) => ({
-          id: `${h.id}-${i}`,
-          ...m,
-          timestamp: new Date(h.createdAt)
-        }))
-      ).reverse()
+      const flattened = [...history]
+        .reverse() // Reverse the conversations (bring oldest to front)
+        .flatMap((h: any) => 
+          h.messages.map((m: any, i: number) => ({
+            id: `${h.id}-${i}`,
+            ...m,
+            timestamp: new Date(h.createdAt)
+          }))
+        )
       
       setMessages(flattened)
     }
