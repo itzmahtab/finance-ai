@@ -4,7 +4,6 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
-  MoreHorizontal,
   Target,
   ArrowRight,
   TrendingUp as TrendingUpIcon

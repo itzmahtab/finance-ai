@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, Calendar, Sparkles, TrendingUp, BarChart2, Loader2, ArrowRight, BrainCircuit, Wallet } from 'lucide-react'
+import { Download, Calendar, Sparkles, TrendingUp, BarChart2, Loader2, ArrowRight, BrainCircuit } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/format'
 import { Button } from '@/components/ui/button'
