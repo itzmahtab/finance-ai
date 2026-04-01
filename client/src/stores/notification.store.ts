@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { toast as sonnerToast } from 'sonner'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -19,6 +20,18 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set) => ({
   toasts: [],
   addToast: (toast) => {
+    // Trigger the actual Shadcn/Sonner toast
+    const description = toast.message;
+    if (toast.type === 'success') {
+      sonnerToast.success(toast.title, { description })
+    } else if (toast.type === 'error') {
+      sonnerToast.error(toast.title, { description })
+    } else if (toast.type === 'warning') {
+      sonnerToast.warning(toast.title, { description })
+    } else {
+      sonnerToast(toast.title, { description })
+    }
+
     const id = Math.random().toString(36).substring(2, 9)
     const newToast = { ...toast, id }
     set((state) => ({ toasts: [...state.toasts, newToast] }))

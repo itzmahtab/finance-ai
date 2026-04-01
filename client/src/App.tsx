@@ -59,11 +59,14 @@ function AppContent() {
   )
 }
 
+import { Toaster } from 'sonner'
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AppContent />
+        <Toaster position="top-right" richColors closeButton />
       </BrowserRouter>
     </QueryClientProvider>
   )
