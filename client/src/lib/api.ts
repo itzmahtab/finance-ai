@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+let baseApiUrl = import.meta.env.VITE_API_URL || '/api';
+if (baseApiUrl !== '/api' && !baseApiUrl.endsWith('/api')) {
+  baseApiUrl = `${baseApiUrl}/api`;
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: baseApiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +31,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       try {
-        const { data } = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`, {}, { withCredentials: true })
+        const { data } = await axios.post(`${baseApiUrl}/auth/refresh`, {}, { withCredentials: true })
         localStorage.setItem('accessToken', data.accessToken)
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
         return api(originalRequest)
