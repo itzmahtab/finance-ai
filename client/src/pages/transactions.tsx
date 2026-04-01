@@ -32,6 +32,8 @@ import {
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/format'
 import { useTransactions } from '@/hooks/use-transactions'
+import { useFilterStore } from '@/stores/filter.store'
+import { MonthPicker } from '@/components/MonthPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -86,9 +88,17 @@ export default function TransactionsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const { selectedMonth, selectedYear } = useFilterStore()
+
   const filtered = transactions.filter((t: any) => {
     if (filter !== 'all' && t.type !== filter) return false
     if (searchQuery && !t.description?.toLowerCase().includes(searchQuery.toLowerCase())) return false
+    
+    if (selectedMonth !== null && selectedYear !== null) {
+      const date = new Date(t.transactionDate)
+      if (date.getMonth() !== selectedMonth || date.getFullYear() !== selectedYear) return false
+    }
+    
     return true
   })
 
@@ -204,7 +214,8 @@ export default function TransactionsPage() {
             className="pl-11 h-11 rounded-2xl bg-surface/50 border-white/5 focus:border-primary/50 transition-all"
           />
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-2xl bg-surface border border-white/5 shadow-sm">
+        <MonthPicker />
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-surface border border-white/5 shadow-sm hidden sm:flex">
           {(['all', 'income', 'expense'] as const).map((f) => (
             <button
               key={f}

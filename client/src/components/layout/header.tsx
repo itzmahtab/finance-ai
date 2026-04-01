@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { Menu, Bell, Search, LogOut, User, Check, Trash2, Calendar } from 'lucide-react'
@@ -21,6 +21,7 @@ const pageTitles: Record<string, string> = {
 
 export function Header() {
   const location = useLocation()
+  const navigate = useNavigate()
   const setSidebarMobileOpen = useUIStore((s) => s.setSidebarMobileOpen)
   const user = useAuthStore((s) => s.user)
   
@@ -193,7 +194,10 @@ export function Header() {
             </div>
             <div className="p-1.5">
               <button
-                onClick={() => { setProfileOpen(false) }}
+                onClick={() => { 
+                  navigate('/settings')
+                  setProfileOpen(false) 
+                }}
                 className={cn(
                   'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm',
                   'text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors'
