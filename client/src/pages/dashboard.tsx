@@ -25,29 +25,40 @@ import { formatCurrency, formatPercentage, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useFilterStore } from '@/stores/filter.store'
+import { MonthPicker } from '@/components/MonthPicker'
 
 export default function DashboardPage() {
   const { transactions, isLoading: txLoading } = useTransactions()
   const { budget, isLoading: budgetLoading } = useBudget()
   const user = useAuthStore(state => state.user)
 
+  const { selectedMonth, selectedYear } = useFilterStore()
+  
+  // Filter transactions globally based on selected month/year
+  const monthlyTransactions = transactions.filter((tx: any) => {
+    if (selectedMonth === null || selectedYear === null) return true;
+    const date = new Date(tx.transactionDate);
+    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+  });
+
   // Calculate stats from actual transactions instead of just budget
-  const totalIncome = transactions
+  const totalIncome = monthlyTransactions
     .filter((t: any) => t.type === 'income')
     .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0)
     
-  const totalSpent = transactions
+  const totalSpent = monthlyTransactions
     .filter((t: any) => t.type === 'expense')
     .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0)
     
   const remaining = totalIncome - totalSpent
   const spentPct = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0
 
-  const latestTransactions = transactions.slice(0, 5)
+  const latestTransactions = monthlyTransactions.slice(0, 5)
 
   // Calculate dynamic weekly chart data from real transactions
   const getChartData = () => {
-    if (transactions.length === 0) {
+    if (monthlyTransactions.length === 0) {
        return [
         { name: 'Week 1', spent: 0 },
         { name: 'Week 2', spent: 0 },
@@ -56,25 +67,47 @@ export default function DashboardPage() {
       ]
     }
 
-    const now = new Date()
     const weeks = [0, 0, 0, 0] // 4 weeks
     
-    transactions.forEach((tx: any) => {
-      const txDate = new Date(tx.transactionDate)
-      const diffDays = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24))
-      const weekIdx = Math.floor(diffDays / 7)
+    // If a month is selected, plot by 4 fixed weeks in that month
+    if (selectedMonth !== null && selectedYear !== null) {
+      monthlyTransactions.forEach((tx: any) => {
+        const txDate = new Date(tx.transactionDate)
+        const day = txDate.getDate()
+        let week = Math.floor((day - 1) / 7)
+        if (week > 3) week = 3 // Group 22+ days into Week 4
+        
+        if (tx.type === 'expense') {
+          weeks[week] += parseFloat(tx.amount)
+        }
+      })
       
-      if (weekIdx >= 0 && weekIdx < 4 && tx.type === 'expense') {
-        weeks[3 - weekIdx] += parseFloat(tx.amount) // Reverse to show chronological
-      }
-    })
+      return [
+        { name: 'Week 1', spent: weeks[0] },
+        { name: 'Week 2', spent: weeks[1] },
+        { name: 'Week 3', spent: weeks[2] },
+        { name: 'Week 4', spent: weeks[3] },
+      ]
+    } else {
+      // If "All Time", plot a rolling chronological 4 weeks from today
+      const now = new Date()
+      monthlyTransactions.forEach((tx: any) => {
+        const txDate = new Date(tx.transactionDate)
+        const diffDays = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24))
+        const weekIdx = Math.floor(diffDays / 7)
+        
+        if (weekIdx >= 0 && weekIdx < 4 && tx.type === 'expense') {
+          weeks[3 - weekIdx] += parseFloat(tx.amount) // Reverse to show chronological
+        }
+      })
 
-    return [
-      { name: 'Week 1', spent: weeks[0] },
-      { name: 'Week 2', spent: weeks[1] },
-      { name: 'Week 3', spent: weeks[2] },
-      { name: 'Week 4', spent: weeks[3] },
-    ]
+      return [
+        { name: 'Week 1', spent: weeks[0] },
+        { name: 'Week 2', spent: weeks[1] },
+        { name: 'Week 3', spent: weeks[2] },
+        { name: 'Week 4', spent: weeks[3] },
+      ]
+    }
   }
 
   const chartData = getChartData()
@@ -125,11 +158,14 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-foreground capitalize">Welcome back, {user?.fullName?.split(' ')[0] || 'Member'}!</h2>
           <p className="text-sm text-foreground-muted mt-0.5">Here's what's happening with your BDT finances today.</p>
         </div>
-        <Link to="/transactions">
-          <Button className="gap-2 shadow-lg shadow-primary/20">
-            <Plus className="w-4 h-4" /> Add Transaction
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3 w-full sm:w-auto overflow-visible">
+          <MonthPicker />
+          <Link to="/transactions" className="hidden sm:block">
+            <Button className="gap-2 shadow-lg shadow-primary/20">
+              <Plus className="w-4 h-4" /> Add Transaction
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -168,7 +204,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
                <h3 className="text-lg font-bold text-foreground">Spending Analytics</h3>
-               <p className="text-xs text-foreground-muted">Last 4 weeks trend</p>
+               <p className="text-xs text-foreground-muted">
+                 {selectedMonth !== null ? 'Weekly breakdown for month' : 'Last 4 weeks trend'}
+               </p>
             </div>
             <div className="p-2 rounded-xl bg-surface-active cursor-pointer">
               <TrendingUpIcon className="w-4 h-4 text-primary" />
