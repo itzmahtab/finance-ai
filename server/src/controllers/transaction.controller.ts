@@ -55,6 +55,51 @@ export const createTransaction = async (req: any, res: Response) => {
   }
 }
 
+export const deleteTransaction = async (req: any, res: Response) => {
+  try {
+    const { id } = req.params
+
+    await db.delete(transactions)
+      .where(eq(transactions.id, id))
+
+    const { checkBudgetAlerts } = require('../services/notification.service')
+    checkBudgetAlerts(req.userId)
+
+    res.json({ message: 'Transaction deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting transaction:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+export const bulkCreateTransactions = async (req: any, res: Response) => {
+  try {
+    const { transactions: txList } = req.body
+
+    const formattedTransactions = txList.map((tx: any) => ({
+      userId: req.userId,
+      amount: tx.amount.toString(),
+      categoryId: parseInt(tx.categoryId),
+      type: tx.type,
+      description: tx.description,
+      transactionDate: tx.transactionDate,
+      isRecurring: false,
+    }))
+
+    const newTransactions = await db.insert(transactions)
+      .values(formattedTransactions)
+      .returning()
+
+    const { checkBudgetAlerts } = require('../services/notification.service')
+    checkBudgetAlerts(req.userId)
+
+    res.status(201).json(newTransactions)
+  } catch (error) {
+    console.error('Error bulk creating transactions:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
 export const getCategories = async (req: Request, res: Response) => {
   try {
     const list = await db.query.categories.findMany()
@@ -63,3 +108,4 @@ export const getCategories = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Internal server error' })
   }
 }
+

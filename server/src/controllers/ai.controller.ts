@@ -1,7 +1,7 @@
 import { Response } from 'express'
 import { db } from '../db'
 import { budgets, transactions, aiConversations, profiles } from '../db/schema'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, sql } from 'drizzle-orm'
 import { getAICompletion, buildSystemPrompt, AIMessage, buildReportPrompt, generateMonthlyReport } from '../services/ai.service'
 
 export const chatWithAI = async (req: any, res: Response) => {
@@ -140,13 +140,11 @@ export const getMonthlyReport = async (req: any, res: Response) => {
     const report = await generateMonthlyReport(prompt)
 
     // 3. Save to AI history as a special report entry
-    await db.insert(aiConversations).values({
-      userId: req.userId,
-      messages: [
-        { role: 'assistant', content: report },
-      ],
-      contextType: 'report',
-    })
+    // Using raw SQL to handle the enum cast explicitly as a safeguard in Neon
+    await db.execute(sql`
+      INSERT INTO "ai_conversations" ("user_id", "messages", "context_type")
+      VALUES (${req.userId}::uuid, ${JSON.stringify([{ role: 'assistant', content: report }])}::jsonb, 'report'::ai_context_type)
+    `)
 
     res.json({ report })
   } catch (error) {

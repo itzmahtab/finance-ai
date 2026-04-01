@@ -1,7 +1,47 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Bell, Shield, Save } from 'lucide-react'
+import { User, Bell, Shield, Save, Loader2 } from 'lucide-react'
+import { useProfile } from '@/hooks/use-profile'
+import { useAuthStore } from '@/stores/auth.store'
+import { Button } from '@/components/ui/button'
 
 export default function SettingsPage() {
+  const { profile, isLoading, updateProfile, isUpdating } = useProfile()
+  const user = useAuthStore(state => state.user)
+
+  const [formData, setFormData] = useState({
+    fullName: '',
+    profession: '',
+    country: '',
+    currency: '',
+    monthlySalary: '',
+  })
+  
+  // Populate form when profile query returns data
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        fullName: profile.fullName || '',
+        profession: profile.profession || '',
+        country: profile.country || 'Bangladesh',
+        currency: profile.currency || 'BDT',
+        monthlySalary: profile.monthlySalary ? parseFloat(profile.monthlySalary).toString() : '',
+      })
+    }
+  }, [profile])
+
+  const handleSaveProfile = async () => {
+    await updateProfile(formData)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 max-w-[800px] mx-auto">
       <div>
@@ -20,29 +60,73 @@ export default function SettingsPage() {
           <h3 className="text-lg font-semibold text-foreground">Profile</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { label: 'Full Name', placeholder: 'John Doe', type: 'text' },
-            { label: 'Email', placeholder: 'john@example.com', type: 'email' },
-            { label: 'Profession', placeholder: 'Software Engineer', type: 'text' },
-            { label: 'Country', placeholder: 'United States', type: 'text' },
-            { label: 'Currency', placeholder: 'USD', type: 'text' },
-            { label: 'Monthly Salary', placeholder: '8500', type: 'number' },
-          ].map((field) => (
-            <div key={field.label}>
-              <label className="block text-sm font-medium text-foreground-muted mb-1.5">{field.label}</label>
-              <input
-                type={field.type}
-                placeholder={field.placeholder}
-                className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm placeholder:text-foreground-subtle focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
-              />
-            </div>
-          ))}
+          <div>
+            <label className="block text-sm font-medium text-foreground-muted mb-1.5">Full Name</label>
+            <input
+              type="text"
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground-muted mb-1.5">Email (Read Only)</label>
+            <input
+              type="email"
+              value={user?.email || ''}
+              disabled
+              className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border text-foreground-subtle text-sm cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground-muted mb-1.5">Profession</label>
+            <input
+              type="text"
+              value={formData.profession}
+              onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground-muted mb-1.5">Country</label>
+            <input
+              type="text"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground-muted mb-1.5">Currency</label>
+            <input
+              type="text"
+              value={formData.currency}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground-muted mb-1.5">Monthly Salary</label>
+            <input
+              type="number"
+              value={formData.monthlySalary}
+              onChange={(e) => setFormData({ ...formData, monthlySalary: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
         </div>
-        <button className="mt-5 flex items-center gap-2 px-5 py-2.5 rounded-xl gradient-primary text-white text-sm font-semibold hover:opacity-90 transition-opacity">
-          <Save className="w-4 h-4" />
-          Save Changes
-        </button>
+        <div className="mt-6 flex justify-end">
+          <Button 
+            onClick={handleSaveProfile} 
+            disabled={isUpdating} 
+            className="gap-2 shadow-glow-primary rounded-xl px-6"
+          >
+            {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isUpdating ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </motion.div>
+
 
       {/* Notifications */}
       <motion.div

@@ -8,6 +8,10 @@ import budgetRoutes from './routes/budget.routes'
 import aiRoutes from './routes/ai.routes'
 import investmentRoutes from './routes/investment.routes'
 import notificationRoutes from './routes/notification.routes'
+import goalRoutes from './routes/goal.routes'
+import profileRoutes from './routes/profile.routes'
+
+
 
 dotenv.config()
 
@@ -25,6 +29,10 @@ app.use('/api/budgets', budgetRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/investments', investmentRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/goals', goalRoutes)
+app.use('/api/profile', profileRoutes)
+
+
 
 // Default Route
 app.get('/', (req, res) => {

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Download, Calendar, Sparkles, TrendingUp, BarChart2, Loader2, ArrowRight, BrainCircuit, Wallet } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -18,16 +19,16 @@ export default function ReportsPage() {
     if (transactions.length === 0) return []
 
     const history: Record<string, { month: string; income: number; expenses: number }> = {}
-    
+
     transactions.forEach((tx: any) => {
       const date = new Date(tx.transactionDate)
       const key = `${date.getFullYear()}-${date.getMonth()}`
       const monthName = date.toLocaleString('default', { month: 'long', year: 'numeric' })
-      
+
       if (!history[key]) {
         history[key] = { month: monthName, income: 0, expenses: 0 }
       }
-      
+
       if (tx.type === 'income') {
         history[key].income += parseFloat(tx.amount)
       } else {
@@ -71,8 +72,8 @@ export default function ReportsPage() {
           <h2 className="text-2xl font-bold text-foreground">Financial Reports</h2>
           <p className="text-sm text-foreground-muted mt-0.5">Deep insights into your BDT spending & growth</p>
         </div>
-        <Button 
-          onClick={generateAIReport} 
+        <Button
+          onClick={generateAIReport}
           disabled={isLoading}
           className="gap-2 shadow-glow-primary group h-11 rounded-2xl px-6"
         >
@@ -82,7 +83,8 @@ export default function ReportsPage() {
       </div>
 
       {/* CSS for print mode */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           nav, aside, button, footer, .print\\:hidden {
             display: none !important;
@@ -123,7 +125,7 @@ export default function ReportsPage() {
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity print:hidden">
                 <BrainCircuit className="w-32 h-32 text-primary" />
               </div>
-              
+
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-2xl bg-primary/20 flex items-center justify-center print:border print:border-black">
@@ -131,11 +133,11 @@ export default function ReportsPage() {
                   </div>
                   <h3 className="text-xl font-bold text-foreground">AI Financial Insights & Health Analysis</h3>
                 </div>
-                <Button 
-                   variant="glass" 
-                   size="sm" 
-                   className="print:hidden gap-2 h-9 rounded-xl font-bold uppercase tracking-wider text-[10px]"
-                   onClick={handleExportPDF}
+                <Button
+                  variant="glass"
+                  size="sm"
+                  className="print:hidden gap-2 h-9 rounded-xl font-bold uppercase tracking-wider text-[10px]"
+                  onClick={handleExportPDF}
                 >
                   <Download className="w-3.5 h-3.5" /> Export PDF
                 </Button>
@@ -226,7 +228,7 @@ export default function ReportsPage() {
                       <p className="text-[10px] text-foreground-muted font-black uppercase tracking-widest mt-0.5">Monthly Summary</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 flex-1 sm:max-w-xl">
                     <div>
                       <p className="text-[10px] font-bold text-foreground-subtle uppercase tracking-widest mb-1.5">Income</p>
@@ -248,7 +250,7 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={handleExportPDF}
                     className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-surface-active text-xs font-bold text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-all group/btn print:hidden"
                   >
