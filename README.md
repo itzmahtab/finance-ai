@@ -13,6 +13,7 @@ A modern, full-stack personal finance application powered by the PERN stack (Pos
   - Add single transactions easily.
   - Perform bulk CSV imports for bulk data entry.
   - Categorize, edit, and delete spending.
+  - **Monthly Tracking**: Filter your whole application view by a specific month and year natively.
 * **Financial Goals**: Set target dates, track your monthly contributions, and visually monitor your milestones with animated progress rings.
 * **Portfolio & Investments**: Log investments (stocks, crypto, real estate) and track asset growth.
 * **Profile Customization**: Maintain your financial profile including risk tolerance, currency, and profession to improve AI advice.
@@ -28,6 +29,7 @@ A modern, full-stack personal finance application powered by the PERN stack (Pos
 * **State Management**: Zustand (Auth & Notifications), TanStack React Query v5 (Data fetching & caching)
 * **Routing**: React Router DOM v7
 * **Icons & Charts**: Lucide React, Recharts
+* **Hosting**: Ready for Vercel
 
 ### Backend (Server)
 * **Runtime**: Node.js + Express
@@ -35,6 +37,7 @@ A modern, full-stack personal finance application powered by the PERN stack (Pos
 * **ORM**: Drizzle ORM
 * **Authentication**: JWT & bcryptjs
 * **AI Integration**: OpenRouter API
+* **Hosting**: Ready for Render / Heroku
 
 ---
 
@@ -104,28 +107,39 @@ npm run dev
 
 ## 🚀 Deployment Guide
 
-This repository is structured perfectly for deployment on platforms like Render (Backend) and Vercel/Netlify (Frontend).
+This project is perfectly split for a smooth deployment experience: Backend on **Render** and Frontend on **Vercel**.
 
-### Deploying the Backend (e.g., Render)
-1. Push your code to GitHub.
-2. Log into Render and create a new **Web Service**.
-3. Point it to your repository.
-4. **Build Command**: `cd server && npm install && npm run build`
-5. **Start Command**: `cd server && npm start`
-6. Add your Environment Variables (`DATABASE_URL`, `JWT_SECRET`, `OPEN_ROUTER_API_KEY`).
-7. Deploy!
+### Part 1: Deploying the Backend on Render
+1. Ensure your latest code is pushed to your GitHub repository.
+2. Log into [Render.com](https://render.com) and click **New +** → **Web Service**.
+3. Connect your GitHub repository (`finance-ai`).
+4. Apply the following settings:
+    - **Language/Environment**: Node
+    - **Root Directory**: `server`
+    - **Build Command**: `npm install && npm run build`
+    - **Start Command**: `npm start`
+5. Scroll down to **Environment Variables** and add all your keys from `server/.env`:
+    - `DATABASE_URL` (Your Neon Postgres Production URL)
+    - `JWT_SECRET` (A strong random string)
+    - `OPEN_ROUTER_API_KEY` (Your OpenRouter Key)
+    - `NODE_ENV` = `production`
+6. Click **Create Web Service**. Wait for the build to finish.
+7. **Important**: Once deployed, copy your Render API URL (e.g., `https://finance-ai-api.onrender.com`). You will need this for the frontend!
 
-> **Note:** Take note of your backend production URL (e.g., `https://finance-ai-api.onrender.com`).
+### Part 2: Deploying the Frontend on Vercel
+1. Log into [Vercel](https://vercel.com) and click **Add New** → **Project**.
+2. Import your GitHub repository (`finance-ai`).
+3. In the project setup, modify the following:
+    - **Framework Preset**: Vite (should be auto-detected)
+    - **Root Directory**: Click Edit and select `client`
+4. Expander **Environment Variables** and add:
+    - Name: `VITE_API_URL`
+    - Value: `https://finance-ai-api.onrender.com/api` *(Paste the URL from Render, make sure to add `/api` at the end)*
+5. Click **Deploy**.
+6. Vercel will build your React application using the `vercel.json` already included to resolve Single Page App routing automatically.
+7. Once finished, visit your live Vercel domain!
 
-### Deploying the Frontend (e.g., Vercel)
-1. Log into Vercel and create a new project.
-2. Select your repository.
-3. In the framework preset, it should automatically detect **Vite**.
-4. **Root Directory**: Select `client` (very important!).
-5. **Environment Variables**: Add an environment variable to point to your new backend URL.
-    - `VITE_API_URL=https://finance-ai-api.onrender.com/api`
-6. Click Deploy!
-> *Make sure to update your `api.ts` base URL to use `import.meta.env.VITE_API_URL` instead of the local hardcoded proxy endpoint if applicable.*
+> **Note on CORS:** No changes are required as the backend allows all origins by default in its configuration. Vercel and Render will talk to each other flawlessly!
 
 ---
 
