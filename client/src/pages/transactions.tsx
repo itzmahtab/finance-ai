@@ -30,12 +30,10 @@ import {
   Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { useTransactions } from '@/hooks/use-transactions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 const categoryIcons: Record<string, any> = {
   Shopping: ShoppingBag,

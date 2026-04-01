@@ -4,7 +4,6 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
-  MoreHorizontal,
   Target,
   ArrowRight,
   TrendingUp as TrendingUpIcon
@@ -32,8 +31,15 @@ export default function DashboardPage() {
   const { budget, isLoading: budgetLoading } = useBudget()
   const user = useAuthStore(state => state.user)
 
-  const totalSpent = (budget?.items || []).reduce((sum: number, i: any) => sum + parseFloat(i.spentAmount), 0)
-  const totalIncome = parseFloat(budget?.totalAmount || '0')
+  // Calculate stats from actual transactions instead of just budget
+  const totalIncome = transactions
+    .filter((t: any) => t.type === 'income')
+    .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0)
+    
+  const totalSpent = transactions
+    .filter((t: any) => t.type === 'expense')
+    .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0)
+    
   const remaining = totalIncome - totalSpent
   const spentPct = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0
 
