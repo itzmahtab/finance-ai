@@ -24,7 +24,7 @@ export function useAuth() {
       addToast({
         type: 'success',
         title: 'Welcome back!',
-        message: `Logged in as ${data.user.email}`,
+        message: `Glad to see you again, ${data.user.fullName}!`,
       })
       navigate('/dashboard')
     } catch (error: any) {

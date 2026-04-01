@@ -3,7 +3,8 @@ import { users } from './users'
 import { profiles } from './profiles'
 import { categories } from './categories'
 import { transactions } from './transactions'
-import { budgets, budgetItems } from './budgets_goals'
+import { budgets, budgetItems, goals } from './budgets_goals'
+
 import { investments, notifications, aiConversations } from './others'
 
 export * from './users'
@@ -18,7 +19,9 @@ export const userRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles, { fields: [users.id], references: [profiles.userId] }),
   transactions: many(transactions),
   budgets: many(budgets),
-}))
+  goals: many(goals),
+})
+)
 
 export const profileRelations = relations(profiles, ({ one }) => ({
   user: one(users, { fields: [profiles.userId], references: [users.id] }),
@@ -42,4 +45,7 @@ export const budgetRelations = relations(budgets, ({ one, many }) => ({
 export const budgetItemRelations = relations(budgetItems, ({ one }) => ({
   budget: one(budgets, { fields: [budgetItems.budgetId], references: [budgets.id] }),
   category: one(categories, { fields: [budgetItems.categoryId], references: [categories.id] }),
+}))
+export const goalRelations = relations(goals, ({ one }) => ({
+  user: one(users, { fields: [goals.userId], references: [users.id] }),
 }))

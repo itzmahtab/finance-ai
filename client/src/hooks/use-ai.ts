@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
+import { useNotificationStore } from '@/stores/notification.store'
 
 export interface Message {
   id: string
@@ -61,6 +62,14 @@ export function useAI() {
       }
       setMessages((prev) => [...prev, aiMsg])
       queryClient.invalidateQueries({ queryKey: ['ai-history'] })
+    },
+    onError: (error: any) => {
+      const { addToast } = useNotificationStore.getState()
+      addToast({
+        type: 'error',
+        title: 'Advisor Error',
+        message: error.response?.data?.message || 'Could not reach your AI advisor. Please try again.',
+      })
     },
   })
 

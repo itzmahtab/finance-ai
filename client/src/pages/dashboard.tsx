@@ -6,7 +6,8 @@ import {
   Plus,
   MoreHorizontal,
   Target,
-  ArrowRight
+  ArrowRight,
+  TrendingUp as TrendingUpIcon
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -20,6 +21,7 @@ import {
 } from 'recharts'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useBudget } from '@/hooks/use-budget'
+import { useAuthStore } from '@/stores/auth.store'
 import { formatCurrency, formatPercentage, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -28,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 export default function DashboardPage() {
   const { transactions, isLoading: txLoading } = useTransactions()
   const { budget, isLoading: budgetLoading } = useBudget()
+  const user = useAuthStore(state => state.user)
 
   const totalSpent = (budget?.items || []).reduce((sum: number, i: any) => sum + parseFloat(i.spentAmount), 0)
   const totalIncome = parseFloat(budget?.totalAmount || '0')
@@ -36,36 +39,59 @@ export default function DashboardPage() {
 
   const latestTransactions = transactions.slice(0, 5)
 
-  // Chart data (mocking the time series for now, but using real current totals)
-  const chartData = [
-    { name: 'Week 1', spent: 1200 },
-    { name: 'Week 2', spent: 2100 },
-    { name: 'Week 3', spent: 1800 },
-    { name: 'Week 4', spent: totalSpent },
-  ]
+  // Calculate dynamic weekly chart data from real transactions
+  const getChartData = () => {
+    if (transactions.length === 0) {
+       return [
+        { name: 'Week 1', spent: 0 },
+        { name: 'Week 2', spent: 0 },
+        { name: 'Week 3', spent: 0 },
+        { name: 'Week 4', spent: 0 },
+      ]
+    }
+
+    const now = new Date()
+    const weeks = [0, 0, 0, 0] // 4 weeks
+    
+    transactions.forEach((tx: any) => {
+      const txDate = new Date(tx.transactionDate)
+      const diffDays = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24))
+      const weekIdx = Math.floor(diffDays / 7)
+      
+      if (weekIdx >= 0 && weekIdx < 4 && tx.type === 'expense') {
+        weeks[3 - weekIdx] += parseFloat(tx.amount) // Reverse to show chronological
+      }
+    })
+
+    return [
+      { name: 'Week 1', spent: weeks[0] },
+      { name: 'Week 2', spent: weeks[1] },
+      { name: 'Week 3', spent: weeks[2] },
+      { name: 'Week 4', spent: weeks[3] },
+    ]
+  }
+
+  const chartData = getChartData()
 
   const stats = [
     {
       label: 'Monthly Income',
       value: totalIncome,
-      change: '+12%',
-      trend: 'up',
+      subValue: 'Total Budgeted',
       icon: TrendingUp,
       color: 'text-primary'
     },
     {
       label: 'Total Expenses',
       value: totalSpent,
-      change: '-5%',
-      trend: 'down',
+      subValue: 'Current Month',
       icon: TrendingDown,
       color: 'text-foreground'
     },
     {
       label: 'Available Savings',
       value: remaining,
-      change: '+8%',
-      trend: 'up',
+      subValue: 'Remaining Cash',
       icon: Wallet,
       color: remaining > 0 ? 'text-primary' : 'text-destructive'
     },
@@ -90,7 +116,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Welcome back, User!</h2>
+          <h2 className="text-2xl font-bold text-foreground capitalize">Welcome back, {user?.fullName?.split(' ')[0] || 'Member'}!</h2>
           <p className="text-sm text-foreground-muted mt-0.5">Here's what's happening with your BDT finances today.</p>
         </div>
         <Link to="/transactions">
@@ -114,15 +140,13 @@ export default function DashboardPage() {
               <div className="w-10 h-10 rounded-xl bg-surface-active flex items-center justify-center">
                 <stat.icon className={cn('w-5 h-5', stat.color)} />
               </div>
-              <Badge variant="glass" className={cn(
-                'text-[10px] font-bold',
-                stat.trend === 'up' ? 'text-primary' : 'text-foreground-muted'
-              )}>
-                {stat.change}
+              <Badge variant="glass" className="text-[10px] font-bold text-foreground-muted">
+                LIVE DATA
               </Badge>
             </div>
             <p className="text-sm font-medium text-foreground-muted">{stat.label}</p>
             <h3 className="text-2xl font-bold font-mono mt-1">{formatCurrency(stat.value)}</h3>
+            <p className="text-[10px] text-foreground-subtle font-bold uppercase tracking-wider mt-2">{stat.subValue}</p>
           </motion.div>
         ))}
       </div>
@@ -136,9 +160,12 @@ export default function DashboardPage() {
           className="glass rounded-3xl p-6 flex flex-col border-none"
         >
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-foreground">Expense Analytics</h3>
+            <div>
+               <h3 className="text-lg font-bold text-foreground">Spending Analytics</h3>
+               <p className="text-xs text-foreground-muted">Last 4 weeks trend</p>
+            </div>
             <div className="p-2 rounded-xl bg-surface-active cursor-pointer">
-              <MoreHorizontal className="w-4 h-4 text-foreground-muted" />
+              <TrendingUpIcon className="w-4 h-4 text-primary" />
             </div>
           </div>
           <div className="h-[280px] w-full">
@@ -166,6 +193,7 @@ export default function DashboardPage() {
                     borderRadius: '12px',
                     fontSize: '12px'
                   }} 
+                  formatter={(value: any) => [`৳${value}`, 'Spending']}
                 />
                 <Area 
                   type="monotone" 
@@ -195,41 +223,41 @@ export default function DashboardPage() {
           <div className="flex-1 space-y-6">
             {!budget ? (
                <div className="flex flex-col items-center justify-center h-full text-center py-10">
-                <Target className="w-12 h-12 text-foreground-subtle mb-4" />
+                <div className="w-16 h-16 rounded-3xl bg-surface-active flex items-center justify-center mb-4">
+                  <Target className="w-8 h-8 text-foreground-subtle" />
+                </div>
                 <p className="text-sm text-foreground-muted mb-4 uppercase tracking-widest font-bold">No Active Budget</p>
                 <Link to="/budget">
-                  <Button variant="glass" size="sm">Set Budget Now</Button>
+                  <Button variant="glass" size="sm" className="rounded-xl px-6">Set Budget Now</Button>
                 </Link>
                </div>
             ) : (
               <>
-                <div className="relative h-40 flex items-center justify-center">
-                  {/* Big progress ring placeholder or target visual */}
+                <div className="relative h-44 flex items-center justify-center">
                   <div className="text-center">
-                    <p className="text-4xl font-black font-mono">{formatPercentage(spentPct, 0)}</p>
-                    <p className="text-[10px] text-foreground-muted uppercase tracking-widest font-bold mt-1">Total Limit Spent</p>
+                    <p className="text-5xl font-black font-mono tracking-tighter">{formatPercentage(spentPct, 0)}</p>
+                    <p className="text-[10px] text-foreground-muted uppercase tracking-[0.2em] font-bold mt-2">Overall Limit Spent</p>
                   </div>
-                  {/* SVG Ring */}
-                  <svg className="absolute w-40 h-40 transform -rotate-90">
-                    <circle cx="80" cy="80" r="70" stroke="rgba(255,255,255,0.05)" strokeWidth="12" fill="transparent" />
+                  <svg className="absolute w-44 h-44 transform -rotate-90">
+                    <circle cx="88" cy="88" r="78" stroke="rgba(255,255,255,0.03)" strokeWidth="12" fill="transparent" />
                     <circle 
-                      cx="80" cy="80" r="70" 
+                      cx="88" cy="88" r="78" 
                       stroke="var(--color-primary)" 
                       strokeWidth="12" 
                       fill="transparent" 
-                      strokeDasharray={440} 
-                      strokeDashoffset={440 - (440 * spentPct) / 100}
+                      strokeDasharray={490} 
+                      strokeDashoffset={490 - (490 * Math.min(spentPct, 100)) / 100}
                       strokeLinecap="round"
                     />
                   </svg>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5 px-4">
                   {(budget?.items || []).slice(0, 3).map((item: any) => {
                     const pct = Math.min((parseFloat(item.spentAmount) / parseFloat(item.allocatedAmount)) * 100, 100)
                     return (
                       <div key={item.id} className="space-y-2">
-                        <div className="flex justify-between text-xs font-bold">
+                        <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
                           <span className="text-foreground-muted">{item.category?.name}</span>
                           <span className="text-foreground">{formatPercentage(pct, 0)}</span>
                         </div>
@@ -237,7 +265,7 @@ export default function DashboardPage() {
                           <motion.div 
                             initial={{ width: 0 }} 
                             animate={{ width: `${pct}%` }} 
-                            className="h-full bg-primary rounded-full shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]" 
+                            className="h-full bg-primary rounded-full shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.3)]" 
                           />
                         </div>
                       </div>
@@ -257,33 +285,39 @@ export default function DashboardPage() {
         transition={{ delay: 0.5 }}
         className="glass rounded-3xl overflow-hidden border-none"
       >
-        <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
+        <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground">Recent Activity</h3>
-          <Link to="/transactions" className="p-2 rounded-xl hover:bg-surface-active transition-colors">
+          <Link to="/transactions" className="p-2.5 rounded-xl bg-surface-active hover:bg-surface-hover transition-colors">
             <ArrowRight className="w-5 h-5 text-foreground-muted" />
           </Link>
         </div>
         <div className="divide-y divide-white/5">
           {txLoading ? (
-            <div className="p-20 text-center text-foreground-muted">Loading history...</div>
+            <div className="p-20 text-center text-foreground-muted text-sm font-medium">Synchronizing transactions...</div>
           ) : latestTransactions.length === 0 ? (
-            <div className="p-20 text-center text-foreground-muted">No transactions recorded yet.</div>
+            <div className="p-24 text-center">
+              <div className="w-16 h-16 rounded-full bg-surface-active flex items-center justify-center mx-auto mb-4 border border-white/5">
+                <Wallet className="w-8 h-8 text-foreground-subtle" />
+              </div>
+              <p className="text-sm text-foreground-muted font-medium">No transactions recorded yet.</p>
+              <Link to="/transactions" className="text-xs text-primary font-bold hover:underline mt-2 inline-block uppercase tracking-widest">Start recording now</Link>
+            </div>
           ) : latestTransactions.map((tx: any) => (
-            <div key={tx.id} className="px-6 py-4 flex items-center justify-between hover:bg-surface-hover/30 transition-colors">
+            <div key={tx.id} className="px-8 py-5 flex items-center justify-between hover:bg-white/5 transition-all group">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-surface-active flex items-center justify-center font-bold text-xs">
-                  {tx.category?.name?.charAt(0)}
+                <div className="w-11 h-11 rounded-2xl bg-surface-active border border-white/5 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
+                  {tx.category?.name?.charAt(0) || '?'}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-foreground">{tx.description}</p>
-                  <p className="text-[10px] text-foreground-muted uppercase tracking-wider">{tx.category?.name}</p>
+                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{tx.description}</p>
+                  <p className="text-[10px] text-foreground-muted font-bold uppercase tracking-widest mt-0.5">{tx.category?.name}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className={cn("text-sm font-black font-mono", tx.type === 'income' ? 'text-primary' : 'text-foreground')}>
+                <p className={cn("text-sm font-black font-mono tracking-tight", tx.type === 'income' ? 'text-primary' : 'text-foreground')}>
                   {tx.type === 'income' ? '+' : '-'}{formatCurrency(parseFloat(tx.amount))}
                 </p>
-                <p className="text-[10px] text-foreground-subtle font-medium">{formatDate(tx.transactionDate)}</p>
+                <p className="text-[10px] text-foreground-subtle font-bold uppercase tracking-tighter mt-1">{formatDate(tx.transactionDate)}</p>
               </div>
             </div>
           ))}

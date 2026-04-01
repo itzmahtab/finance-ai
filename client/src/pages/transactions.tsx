@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeftRight,
@@ -24,7 +25,9 @@ import {
   Plane,
   ShoppingCart,
   ChevronDown,
-  MoreHorizontal
+  MoreHorizontal,
+  Trash2,
+  Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -61,8 +64,9 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
-  const { transactions, categories, isLoading, createTransaction, isSubmitting } = useTransactions()
+  const { transactions, categories, isLoading, createTransaction, isSubmitting, deleteTransaction, importTransactions, isImporting } = useTransactions()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
   const [form, setForm] = useState({
@@ -113,7 +117,47 @@ export default function TransactionsPage() {
     }
   }
 
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string
+        const lines = text.split('\n').filter(line => line.trim())
+        
+        // Basic parser assuming columns: Date, Description, Amount, Category, Type
+        const parsedData = lines.slice(1).map(line => {
+          const [date, description, amount, category, type] = line.split(',')
+          
+          // Try to find matching category, otherwise use "Other"
+          const cat = categories.find((c: any) => c.name.toLowerCase() === category?.trim().toLowerCase()) 
+            || categories.find((c: any) => c.name === 'Other')
+
+          return {
+            transactionDate: date?.trim() || new Date().toISOString().split('T')[0],
+            description: description?.trim() || 'Imported Transaction',
+            amount: Math.abs(parseFloat(amount?.trim() || '0')).toString(),
+            categoryId: cat?.id || 1,
+            type: type?.trim().toLowerCase() === 'income' ? 'income' : 'expense'
+          }
+        })
+
+        if (parsedData.length > 0) {
+          await importTransactions(parsedData)
+        }
+      } catch (err) {
+        console.error("Failed to parse CSV", err)
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    }
+    reader.readAsText(file)
+  }
+
   const selectedCategory = categories.find((c: any) => c.id.toString() === form.categoryId)
+
 
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto pb-10">
@@ -124,10 +168,25 @@ export default function TransactionsPage() {
           <p className="text-sm text-foreground-muted mt-0.5">Track all your income and expenses</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="glass" size="sm" className="hidden sm:flex gap-2 text-foreground-muted hover:text-foreground">
-            <Upload className="w-4 h-4" /> Import CSV
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleImportCSV} 
+          />
+          <Button 
+            variant="glass" 
+            size="sm" 
+            className="hidden sm:flex gap-2 text-foreground-muted hover:text-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+          >
+            {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {isImporting ? 'Importing...' : 'Import CSV'}
           </Button>
           <Button
+
             onClick={() => setIsModalOpen(true)}
             className="gap-2 shadow-glow-primary hover:scale-[1.02] transition-transform"
           >
@@ -167,14 +226,16 @@ export default function TransactionsPage() {
 
       {/* Transaction list */}
       <div className="glass rounded-3xl overflow-hidden border border-white/5 shadow-xl">
-        <div className="hidden sm:grid grid-cols-[1fr_160px_120px_110px] gap-4 px-8 py-4 border-b border-white/5 text-[10px] font-bold text-foreground-subtle uppercase tracking-widest">
+        <div className="hidden sm:grid grid-cols-[1fr_160px_120px_110px_40px] gap-4 px-8 py-4 border-b border-white/5 text-[10px] font-bold text-foreground-subtle uppercase tracking-widest">
           <span>Transaction Detail</span>
           <span>Category</span>
           <span className="text-right">Amount</span>
           <span className="text-right">Date</span>
+          <span />
         </div>
 
         <div className="divide-y divide-white/5">
+
           {isLoading ? (
             Array(5).fill(0).map((_, i) => (
               <div key={i} className="px-8 py-5 animate-pulse flex items-center justify-between">
@@ -197,17 +258,38 @@ export default function TransactionsPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.015 }}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_110px] gap-2 sm:gap-4 px-8 py-4 hover:bg-white/5 transition-all cursor-pointer group"
+                  className="flex flex-col sm:grid sm:grid-cols-[1fr_160px_120px_110px_40px] gap-4 px-5 sm:px-8 py-4 hover:bg-white/5 transition-all group"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-surface-active flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary/5 transition-all shadow-sm">
-                      <Icon className="w-5.5 h-5.5 text-foreground-muted group-hover:text-primary transition-colors" />
+                  {/* Mobile Row Headers + Details */}
+                  <div className="flex items-center justify-between sm:contents">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-11 h-11 rounded-2xl bg-surface-active flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary/5 transition-all shadow-sm">
+                        <Icon className="w-5.5 h-5.5 text-foreground-muted group-hover:text-primary transition-colors" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{tx.description}</p>
+                        <p className="text-[10px] text-foreground-subtle font-bold uppercase tracking-tight sm:hidden mt-0.5">{tx.category?.name}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{tx.description}</p>
-                      <p className="text-[10px] text-foreground-subtle font-bold uppercase tracking-tight sm:hidden">{tx.category?.name}</p>
+
+                    {/* Mobile Details Area */}
+                    <div className="flex sm:hidden items-center gap-3 shrink-0">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={cn('text-sm font-bold tracking-tight leading-none', tx.type === 'income' ? 'text-primary' : 'text-foreground')}>
+                          {tx.type === 'income' ? '৳' : '-৳'}{parseFloat(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] font-bold text-foreground-subtle uppercase tracking-tighter leading-none">{formatDate(tx.transactionDate)}</span>
+                      </div>
+                      <button 
+                        onClick={() => deleteTransaction(tx.id)}
+                        className="p-2 -mr-2 rounded-xl text-foreground-subtle hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="w-4.5 h-4.5" />
+                      </button>
                     </div>
                   </div>
+
+                  {/* Desktop Only Columns */}
                   <div className="hidden sm:flex items-center">
                     <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-active border border-white/5">
                       <Icon className="w-3.5 h-3.5 text-foreground-muted" />
@@ -216,22 +298,26 @@ export default function TransactionsPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end">
-                    <span
-                      className={cn(
-                        'text-sm font-bold tracking-tight',
-                        tx.type === 'income' ? 'text-primary' : 'text-foreground'
-                      )}
-                    >
+                  <div className="hidden sm:flex items-center justify-end">
+                    <span className={cn('text-sm font-bold tracking-tight', tx.type === 'income' ? 'text-primary' : 'text-foreground')}>
                       {tx.type === 'income' ? '৳' : '-৳'}{parseFloat(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex items-center justify-end">
+                  <div className="hidden sm:flex items-center justify-end">
                     <span className="text-[10px] font-bold text-foreground-subtle uppercase tracking-tighter">{formatDate(tx.transactionDate)}</span>
+                  </div>
+                  <div className="hidden sm:flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => deleteTransaction(tx.id)}
+                      className="p-2 rounded-xl text-foreground-subtle hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </motion.div>
               )
             })
+
           ) : (
             <div className="text-center py-24">
               <div className="w-20 h-20 rounded-3xl bg-surface-active flex items-center justify-center mx-auto mb-6 shadow-sm border border-white/5">
@@ -268,7 +354,8 @@ export default function TransactionsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg glass-strong rounded-[2.5rem] p-8 border border-white/10 shadow-3xl overflow-hidden"
+              className="relative w-full max-w-lg glass-strong rounded-[2.5rem] p-8 border border-white/10 shadow-3xl"
+
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
@@ -437,4 +524,4 @@ export default function TransactionsPage() {
 }
 
 // Helper to use React within the component context without needing top-level import for createElement
-import React from 'react'
+

@@ -45,11 +45,59 @@ export function useTransactions() {
     },
   })
 
+  const deleteTransaction = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/transactions/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['budget'] })
+      addToast({
+        type: 'success',
+        title: 'Transaction Deleted',
+        message: 'The transaction has been removed.',
+      })
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Could not delete transaction.',
+      })
+    },
+  })
+
+  const importTransactions = useMutation({
+    mutationFn: async (transactionsData: any) => {
+      const { data } = await api.post('/transactions/bulk', { transactions: transactionsData })
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['budget'] })
+      addToast({
+        type: 'success',
+        title: 'Transactions Imported',
+        message: `Successfully imported ${data.length} transactions.`,
+      })
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        title: 'Import Failed',
+        message: 'There was an error importing your CSV.',
+      })
+    },
+  })
+
   return {
     transactions,
     categories,
     isLoading,
     createTransaction: createTransaction.mutateAsync,
     isSubmitting: createTransaction.isPending,
+    deleteTransaction: deleteTransaction.mutateAsync,
+    importTransactions: importTransactions.mutateAsync,
+    isImporting: importTransactions.isPending,
   }
 }
